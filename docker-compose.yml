@@ -1,0 +1,63 @@
+version: "3.9"
+
+services:
+  vote:
+    build: 
+      context: ./vote
+      dockerfile: Dockerfile
+    ports:
+      - "50010:80"
+    depends_on:
+      - redis 
+    networks:
+      - vote-network
+    env_file:
+      - .env
+
+  redis:
+    image: redis:6.0-alpine
+    networks:
+      - vote-network
+
+  worker:
+    build: 
+      context: ./worker
+      dockerfile: Dockerfile
+    depends_on:
+      - db
+      - redis
+    networks:
+      - vote-network
+    env_file:
+      - .env
+
+  db:
+    image: postgres:12-alpine
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: ${POSTGRES_HOST_AUTH_METHOD}
+    networks:
+      - vote-network
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+  result:
+    build: 
+      context: ./result
+      dockerfile: Dockerfile
+    ports:
+      - "50011:80"
+    depends_on:
+      - db
+    networks:
+      - vote-network
+    env_file:
+      - .env
+
+networks:
+  vote-network:
+    driver: bridge
+
+volumes:
+  db-data:
